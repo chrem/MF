@@ -8,7 +8,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 K = 5  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
 ITERATIONS = 100000  # number of iterations for optimazation
-LEARNING_RATE = 5  # learning rate a
+LEARNING_RATE = 0.5  # learning rate a
 REG_LAMBDA = 0.3  # regulization parameter lambda
 
 
