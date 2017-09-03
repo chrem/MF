@@ -72,8 +72,7 @@ def ML(data):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         for i in xrange(ITERATIONS):
-            sys.stdout.write("\r%d" % i)
-            sys.stdout.flush()
+            # sys.stdout.write("\r%d" % i)
             sess.run(train)
         print"\n"
         print R_pred_1.eval()
