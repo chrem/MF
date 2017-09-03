@@ -5,10 +5,10 @@ import os
 import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-L_FACTORS = 8  # latent factors
+L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 10000  # number of iterations for optimazation
-LEARNING_RATE = 0.003  # learning rate a
+ITERATIONS = 5000  # number of iterations for optimazation
+LEARNING_RATE = 5  # learning rate a
 REG_LAMBDA = 0.5  # regulization parameter lambda
 
 
@@ -22,7 +22,7 @@ def variable_summaries(var):
     tf.summary.scalar('stddev', stddev)
     tf.summary.scalar('max', tf.reduce_max(var))
     tf.summary.scalar('min', tf.reduce_min(var))
-    #tf.summary.histogram('histogram', var)
+    tf.summary.histogram('histogram', var)
 
 
 def split_dataset(x, train_size):
@@ -47,25 +47,20 @@ def isnt_nan(x):
 
 def rmse(x, y, name="RMSE"):
     with tf.name_scope(name):
-        # square_error = tf.squared_difference(x, y)
-        # x = tf.cast(x, tf.float32)
-        x_flatten = x
-        y_flatten = y
-        nonan_x = tf.boolean_mask(x_flatten, isnt_nan(x_flatten))
-        nonan_y = tf.boolean_mask(y_flatten, isnt_nan(x_flatten))
-        diff = tf.subtract(nonan_x, nonan_y)
-        square_error = tf.square(diff)
-        # boolean_mask = tf.boolean_mask(square_error, isnt_nan(square_error))
+        nonan_x = tf.boolean_mask(x, isnt_nan(x))
+        nonan_y = tf.boolean_mask(y, isnt_nan(x))
+        square_error = tf.squared_difference(nonan_x, nonan_y)
         mean_error = tf.reduce_mean(square_error)
         root_mse = tf.sqrt(mean_error)
     return root_mse
 
 
-def prediction(U, I, bu, bi):
+def prediction(U, I, bu, bi, m):
     with tf.name_scope("Prediction"):
         pred = tf.matmul(U, I)
-        # pred = tf.add(pred, bu)
-        # pred = tf.add(pred, bi)
+        pred = tf.add(pred, bu)
+        pred = tf.add(pred, bi)
+        pred = tf.add(pred, m)
     return pred
 
 
@@ -84,17 +79,20 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     with tf.name_scope("Mean_I"):
         meanI = tf.stack([tf.reduce_mean(I, 0)])
         bi.assign(meanI)
-    variable_summaries(U)
-    variable_summaries(I)
-    variable_summaries(bu)
-    variable_summaries(bi)
+    # variable_summaries(U)
+    # variable_summaries(I)
+    # variable_summaries(bu)
+    # variable_summaries(bi)
     # R_train = tf.placeholder(tf.float32, shape=[M, N], name="Ratings")
     R_train = tf.Variable(data_train, dtype=tf.float32,
                           name="Train_data", trainable=False)
     R_test = tf.Variable(data_test, dtype=tf.float32,
                          name="Test_data", trainable=False)
+    with tf.name_scope("Mean"):
+        m = tf.reduce_mean(tf.boolean_mask(
+            R_train, isnt_nan(R_train)), keep_dims=True, name="Mean")
 
-    R_pred = prediction(U, I, bu, bi)
+    R_pred = prediction(U, I, bu, bi, m)
     # with tf.name_scope("R_pred"):
     #     R_pred = tf.where(isnt_nan(R_train), R_pred, nans)
     RMSE_train = rmse(R_train, R_pred, name="RMSE_train")
@@ -117,7 +115,7 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
             # sess.run(train)
             train_writer.add_summary(summary, i)
             # print R.eval()
-            sys.stdout.write("\rCompleted: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f  |-----|  Latent Factors: %d,  Iterations: %d, Learning Rate: %f" %
+            sys.stdout.write("\rCompleted: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f  |-----|  Latent Factors: %d,  Iterations: %d, Learning Rate: %0.3f" %
                              ((i + 1) * 100.0 / iterations, round(RMSE_train.eval(), 5), round(RMSE_test.eval(), 5), K, iterations, learning_rate))
             sys.stdout.flush()
         print"\n"
@@ -126,7 +124,7 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
 
 
 names = ["user_id", "item_id", "rating", "id"]
-dataset = pd.read_csv('u2.data', sep="\t", names=names)
+dataset = pd.read_csv('u.data', sep="\t", names=names)
 
 # names = ["user_id", "item_id", "rating"]
 # dataset = pd.read_csv('u2.data', sep=",", names=names)
