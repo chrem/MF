@@ -85,10 +85,10 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     # variable_summaries(bu)
     # variable_summaries(bi)
 
-    # R_train = tf.placeholder(tf.float32, shape=(943, 1682))
+    R_train = tf.placeholder(tf.float32, [None])
 
-    R_train = tf.Variable(data_train, dtype=tf.float32,
-                          name="Train_data", trainable=False)
+    # R_train = tf.Variable(data_train, dtype=tf.float32,
+    #                       name="Train_data", trainable=False)
     R_test = tf.Variable(data_test, dtype=tf.float32,
                          name="Test_data", trainable=False)
     with tf.name_scope("Mean"):
@@ -110,10 +110,11 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     with tf.Session() as sess:
         train_writer = tf.summary.FileWriter("train", sess.graph)
         # test_writer = tf.summary.FileWriter('test')
-        sess.run(init)
+        sess.run(init, feed_dict={R_train: data_train})
         data_train = np.random.rand(943, 1682)
         for i in xrange(iterations):
-            summary, _ = sess.run([merged, train])
+            summary, _ = sess.run([merged, train], feed_dict={
+                                  R_train: data_train})
             # sess.run(train)
             train_writer.add_summary(summary, i)
 
