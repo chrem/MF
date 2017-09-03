@@ -8,7 +8,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 L_FACTORS = 16  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
 ITERATIONS = 5000  # number of iterations for optimazation
-LEARNING_RATE = 5  # learning rate a
+LEARNING_RATE = 10  # learning rate a
 REG_LAMBDA = 0.3  # regulization parameter lambda
 
 
@@ -32,8 +32,8 @@ def isnt_nan(x):
     return y
 
 
-def rmse(x, y):
-    with tf.name_scope("RMSE"):
+def rmse(x, y, name="RMSE"):
+    with tf.name_scope(name):
         # square_error = tf.squared_difference(x, y)
         square_error = tf.square(x - y)
         boolean_mask = tf.boolean_mask(square_error, isnt_nan(square_error))
@@ -43,7 +43,8 @@ def rmse(x, y):
 
 
 def prediction(U, I):
-    pred = tf.matmul(U, I)
+    with tf.name_scope("Prediction"):
+        pred = tf.matmul(U, I)
     return pred
 
 
@@ -57,25 +58,27 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     # bu = tf.get_variable("User_bias", shape=[M, 1])
     # bi = tf.get_variable("Item_bias", shape=[1, N])
     # R_train = tf.placeholder(tf.float32, shape=[M, N], name="Ratings")
-    R_train = tf.Variable(data_train, dtype=tf.float32)
-    R_test = tf.Variable(data_test, dtype=tf.float32)
+    R_train = tf.Variable(data_train, dtype=tf.float32, name="Train_data")
+    R_test = tf.Variable(data_test, dtype=tf.float32, name="Test_data")
 
     R_pred_1 = prediction(U, I)
-    R_pred = tf.where(isnt_nan(R_train), R_pred_1, nans)
-    RMSE_train = rmse(R_train, R_pred)
-    RMSE_test = rmse(R_test, R_pred_1)
+    with tf.name_scope("R_pred"):
+        R_pred = tf.where(isnt_nan(R_train), R_pred_1, nans)
+    RMSE_train = rmse(R_train, R_pred, name="RMSE_train")
+    RMSE_test = rmse(R_test, R_pred_1, name="RMSE_test")
     tf.summary.histogram('RMSE_train', RMSE_train)
     tf.summary.histogram('RMSE_test', RMSE_test)
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train = optimizer.minimize(RMSE_train, var_list=[U, I])
+    init = tf.global_variables_initializer()
 
     merged = tf.summary.merge_all()
 
     with tf.Session() as sess:
         train_writer = tf.summary.FileWriter("train", sess.graph)
-        test_writer = tf.summary.FileWriter('/test')
-        sess.run(tf.global_variables_initializer())
+        # test_writer = tf.summary.FileWriter('test')
+        sess.run(init)
         for i in xrange(iterations):
             summary, _ = sess.run([merged, train])
             train_writer.add_summary(summary, i)
