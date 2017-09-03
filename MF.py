@@ -59,7 +59,7 @@ def ML(data):
     # bu = tf.get_variable("User_bias", shape=[M, 1])
     # bi = tf.get_variable("Item_bias", shape=[1, N])
     R = tf.placeholder(tf.float32, shape=[M, N], name="Ratings")
-    # R = tf.Variable(data, dtype=tf.float32)
+    # R_data = tf.Variable(data, dtype=tf.float32)
 
     R_pred_1 = tf.matmul(U, I)
     R_pred = tf.where(isnt_nan(R), R_pred_1, nans)
@@ -72,12 +72,14 @@ def ML(data):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         for i in xrange(ITERATIONS):
-            sess.run(train, feed_dict={R: data})
+            sess.run(train, feed_dict={Ratings: data})
+            print R.eval()
             sys.stdout.write("\r%d %0.5f" % (i, round(RMSE.eval(), 5)))
             sys.stdout.flush()
         print"\n"
         print R_pred.eval()
 
 
-a = np.array([[1, 2, 3, 4, 5], [2, np.nan, 5, 6, 7], [8, 7, 6, 5, np.nan]])
+a = np.array([[1, 2, 3, 4, 5], [2, np.nan, 5, 6, 7],
+              [8, 7, 6, 5, np.nan]], dtype=float)
 ML(a)
