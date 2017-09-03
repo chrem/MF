@@ -25,6 +25,15 @@ def variable_summaries(var):
     tf.summary.histogram('histogram', var)
 
 
+def get_dataset():
+    names = ["user_id", "item_id", "rating", "id"]
+    dataset = pd.read_csv('u.data', sep="\t", names=names)
+    dataset_table = dataset.pivot(
+        index=names[0], columns=names[1], values=names[2])
+    Ratings = np.array(dataset_table, dtype=float)
+    return Ratings
+
+
 def split_dataset(x, train_size):
     mask = ~np.isnan(x)
     i, j = np.nonzero(mask)
@@ -80,14 +89,13 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03):
         meanI = tf.stack([tf.reduce_mean(I, 0)])
         bi.assign(meanI)
 
-    # variable_summaries(U)
-    # variable_summaries(I)
-    # variable_summaries(bu)
-    # variable_summaries(bi)
+    variable_summaries(U)
+    variable_summaries(I)
+    variable_summaries(bu)
+    variable_summaries(bi)
 
     R_train = tf.placeholder(tf.float32, shape=(M, N), name="Train_data")
-    #R_test = tf.placeholder(tf.float32, shape=(M, N), name="Test_data")
-
+    R_test = tf.placeholder(tf.float32, shape=(M, N), name="Test_data")
     # R_train = tf.Variable(data_train, dtype=tf.float32, name="Train_data", trainable=False)
     # R_test = tf.Variable(data_test, dtype=tf.float32, name = "Test_data", trainable = False)
 
@@ -97,9 +105,9 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03):
     R_pred = prediction(U, I, bu, bi, m)
 
     Loss = rmse(R_train, R_pred, name="Loss")
-    # RMSE_test = rmse(R_test, R_pred, name="RMSE_test")
+    RMSE_test = rmse(R_test, R_pred, name="RMSE_test")
     tf.summary.histogram('Loss', Loss)
-    # tf.summary.histogram('RMSE_test', RMSE_test)
+    tf.summary.histogram('RMSE_test', RMSE_test)
 
     lr = tf.constant(l_rate, name='learning_rate')
     global_step = tf.Variable(0, trainable=False)
@@ -117,7 +125,7 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03):
         sess.run(init, feed_dict={R_train: data_train})
         for i in xrange(iterations):
             summary, _ = sess.run([merged, train], feed_dict={
-                R_train: data_train})
+                R_train: data_train, R_test: data_test})
             # sess.run(train)
             train_writer.add_summary(summary, i)
 
@@ -128,12 +136,4 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03):
         print"\n"
 
 
-names = ["user_id", "item_id", "rating", "id"]
-dataset = pd.read_csv('u.data', sep="\t", names=names)
-
-dataset_table = dataset.pivot(
-    index=names[0], columns=names[1], values=names[2])
-Ratings = np.array(dataset_table, dtype=float)
-
-
-ML(Ratings, L_FACTORS, TRAIN_SIZE, ITERATIONS, LEARNING_RATE)
+ML(get_dataset(), L_FACTORS, TRAIN_SIZE, ITERATIONS, LEARNING_RATE)
