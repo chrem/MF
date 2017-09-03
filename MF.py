@@ -68,6 +68,7 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     M = len(data)
     N = len(data[0])
     data_train, data_test = split_dataset(data, train_size)
+    print data_train.dtype
     U = tf.get_variable("Users", shape=[M, K])
     I = tf.get_variable("Items", shape=[K, N])
     # nans = tf.constant(float('NaN'), shape=[M, N])
@@ -83,9 +84,9 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     # variable_summaries(I)
     # variable_summaries(bu)
     # variable_summaries(bi)
-    # R_train = tf.placeholder(tf.float32, shape=[M, N], name="Ratings")
-    R_train = tf.Variable(data_train, dtype=tf.float32,
-                          name="Train_data", trainable=False)
+    R_train = tf.placeholder(tf.float32, shape=[M, N], name="Ratings")
+    # R_train = tf.Variable(data_train, dtype=tf.float32,
+    #                     name="Train_data", trainable=False)
     R_test = tf.Variable(data_test, dtype=tf.float32,
                          name="Test_data", trainable=False)
     with tf.name_scope("Mean"):
@@ -111,7 +112,8 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
         test_writer = tf.summary.FileWriter('test')
         sess.run(init)
         for i in xrange(iterations):
-            summary, _ = sess.run([merged, train])
+            summary, _ = sess.run([merged, train], feed_dict={
+                                  R_train: data_train})
             # sess.run(train)
             train_writer.add_summary(summary, i)
             # print R.eval()
@@ -119,7 +121,7 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
                              ((i + 1) * 100.0 / iterations, round(RMSE_train.eval(), 5), round(RMSE_test.eval(), 5), K, iterations, learning_rate))
             sys.stdout.flush()
         print"\n"
-        print prediction(U, I, bu, bi).eval()
+        print prediction(U, I, bu, bi, m).eval()
         print R_train.eval()
 
 
