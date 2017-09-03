@@ -7,9 +7,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 1000  # number of iterations for optimazation
-LEARNING_RATE = 50.0  # learning rate a
-REG_LAMBDA = 0.5  # regulization parameter lambda
+ITERATIONS = 1000  # number of iterations for optimazation (integer)
+LEARNING_RATE = 5.0  # learning rate a (float)
+REG_LAMBDA = 0.0  # regulization parameter lambda (float)
 
 
 def variable_summaries(var):
@@ -73,7 +73,23 @@ def prediction(U, I, bu, bi, m):
     return pred
 
 
-def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03):
+def regulization(U, I, bu, bi, reg_lambda):
+    reg_U = tf.nn.l2_loss(U)
+    # reg_U = tf.multiply(reg_lambda, U2)
+    reg_I = tf.nn.l2_loss(I)
+    # reg_I = tf.multiply(reg_lambda, I2)
+    reg_bu = tf.nn.l2_loss(bu)
+    # reg_bu = tf.multiply(reg_lambda, bu2)
+    reg_bi = tf.nn.l2_loss(bi)
+    # reg_bi = tf.multiply(reg_lambda, bi2)
+    reg = tf.add(reg_U, reg_I)
+    reg = tf.add(reg, reg_bu)
+    reg = tf. add(reg, reg_bi)
+    reg = tf.multiply(reg, reg_lambda)
+    return reg
+
+
+def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03, reg_lambda=0.5):
     M = len(data)
     N = len(data[0])
     data_train, data_test = split_dataset(data, train_size)
@@ -103,8 +119,9 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03):
         m = tf.reduce_mean(tf.matmul(U, I), name="Mean")
 
     R_pred = prediction(U, I, bu, bi, m)
+    R_pred_reg = R_pred + regulization(U, I, bu, bi, reg_lambda)
 
-    Loss = rmse(R_train, R_pred, name="Loss")
+    Loss = rmse(R_train, R_pred_reg, name="Loss")
     RMSE_test = rmse(R_test, R_pred, name="RMSE_test")
     tf.summary.histogram('Loss', Loss)
     tf.summary.histogram('RMSE_test', RMSE_test)
@@ -136,4 +153,4 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03):
         print"\n"
 
 
-ML(get_dataset(), L_FACTORS, TRAIN_SIZE, ITERATIONS, LEARNING_RATE)
+ML(get_dataset(), L_FACTORS, TRAIN_SIZE, ITERATIONS, LEARNING_RATE, REG_LAMBDA)
