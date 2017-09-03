@@ -5,9 +5,9 @@ import os
 import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-L_FACTORS = 16  # latent factors
+L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 5000  # number of iterations for optimazation
+ITERATIONS = 500  # number of iterations for optimazation
 LEARNING_RATE = 10  # learning rate a
 REG_LAMBDA = 0.3  # regulization parameter lambda
 
@@ -66,8 +66,8 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
         R_pred = tf.where(isnt_nan(R_train), R_pred_1, nans)
     RMSE_train = rmse(R_train, R_pred, name="RMSE_train")
     RMSE_test = rmse(R_test, R_pred_1, name="RMSE_test")
-    tf.summary.histogram('RMSE_train', RMSE_train)
-    tf.summary.histogram('RMSE_test', RMSE_test)
+    # tf.summary.histogram('RMSE_train', RMSE_train)
+    # tf.summary.histogram('RMSE_test', RMSE_test)
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train = optimizer.minimize(RMSE_train, var_list=[U, I])
@@ -80,11 +80,12 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
         # test_writer = tf.summary.FileWriter('test')
         sess.run(init)
         for i in xrange(iterations):
-            summary, _ = sess.run([merged, train])
-            train_writer.add_summary(summary, i)
+            # summary, _ = sess.run([merged, train])
+            sess.run(train)
+            # train_writer.add_summary(summary, i)
             # print R.eval()
-            sys.stdout.write("\rIteration: %d%%,  RMSE train: %0.5f,  RMSE test: %0.5f" %
-                             ((i + 1) * 100.0 / iterations, round(RMSE_train.eval(), 5), round(RMSE_test.eval(), 5)))
+            sys.stdout.write("\rCompleted: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f  |~~~|  Latent Factors: %d,  Iterations: %d, Learning Rate: %0.3f" %
+                             ((i + 1) * 100.0 / iterations, round(RMSE_train.eval(), 5), round(RMSE_test.eval(), 5), K, iterations, learning_rate))
             sys.stdout.flush()
         print"\n"
         # print R_pred.eval()
