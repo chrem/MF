@@ -42,6 +42,11 @@ def rmse(x, y):
     return root_mse
 
 
+def prediction(U, I):
+    pred = tf.matmul(U, I)
+    return pred
+
+
 def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     M = len(data)
     N = len(data[0])
@@ -55,7 +60,7 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     R_train = tf.Variable(data_train, dtype=tf.float32)
     R_test = tf.Variable(data_test, dtype=tf.float32)
 
-    R_pred_1 = tf.matmul(U, I)
+    R_pred_1 = prediction(U, I)
     R_pred = tf.where(isnt_nan(R_train), R_pred_1, nans)
     RMSE_train = rmse(R_train, R_pred)
     RMSE_test = rmse(R_test, R_pred_1)
