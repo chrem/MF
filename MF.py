@@ -68,25 +68,27 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     M = len(data)
     N = len(data[0])
     data_train, data_test = split_dataset(data, train_size)
-    print data_train.dtype
-    U = tf.get_variable("Users", shape=[M, K])
-    I = tf.get_variable("Items", shape=[K, N])
-    # nans = tf.constant(float('NaN'), shape=[M, N])
-    bu = tf.get_variable("User_bias", shape=[M, 1])
-    bi = tf.get_variable("Item_bias", shape=[1, N])
+
+    U = tf.get_variable("Users", shape=(M, K))
+    I = tf.get_variable("Items", shape=(K, N))
+    bu = tf.get_variable("User_bias", shape=(M, 1))
+    bi = tf.get_variable("Item_bias", shape=(1, N))
     with tf.name_scope("Mean_U"):
         meanU = tf.stack([tf.reduce_mean(U, 1)])
         bu.assign(tf.transpose(meanU))
     with tf.name_scope("Mean_I"):
         meanI = tf.stack([tf.reduce_mean(I, 0)])
         bi.assign(meanI)
+
     # variable_summaries(U)
     # variable_summaries(I)
     # variable_summaries(bu)
     # variable_summaries(bi)
-    R_train = tf.placeholder(tf.float32, shape=[M, N], name="Ratings")
-    # R_train = tf.Variable(data_train, dtype=tf.float32,
-    #                     name="Train_data", trainable=False)
+
+    # R_train = tf.placeholder(tf.float32, shape=(943, 1682))
+
+    R_train = tf.Variable(data_train, dtype=tf.float32,
+                          name="Train_data", trainable=False)
     R_test = tf.Variable(data_test, dtype=tf.float32,
                          name="Test_data", trainable=False)
     with tf.name_scope("Mean"):
@@ -94,8 +96,7 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
             R_train, isnt_nan(R_train)), keep_dims=True, name="Mean")
 
     R_pred = prediction(U, I, bu, bi, m)
-    # with tf.name_scope("R_pred"):
-    #     R_pred = tf.where(isnt_nan(R_train), R_pred, nans)
+
     RMSE_train = rmse(R_train, R_pred, name="RMSE_train")
     RMSE_test = rmse(R_test, R_pred, name="RMSE_test")
     tf.summary.histogram('RMSE_train', RMSE_train)
@@ -104,32 +105,26 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train = optimizer.minimize(RMSE_train)
     init = tf.global_variables_initializer()
-
     merged = tf.summary.merge_all()
 
     with tf.Session() as sess:
         train_writer = tf.summary.FileWriter("train", sess.graph)
-        test_writer = tf.summary.FileWriter('test')
+        # test_writer = tf.summary.FileWriter('test')
         sess.run(init)
+        data_train = np.random.rand(943, 1682)
         for i in xrange(iterations):
-            summary, _ = sess.run([merged, train], feed_dict={
-                                  R_train: data_train})
+            summary, _ = sess.run([merged, train])
             # sess.run(train)
             train_writer.add_summary(summary, i)
-            # print R.eval()
+
             sys.stdout.write("\rCompleted: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f  |-----|  Latent Factors: %d,  Iterations: %d, Learning Rate: %0.3f" %
                              ((i + 1) * 100.0 / iterations, round(RMSE_train.eval(), 5), round(RMSE_test.eval(), 5), K, iterations, learning_rate))
             sys.stdout.flush()
         print"\n"
-        print prediction(U, I, bu, bi, m).eval()
-        print R_train.eval()
 
 
 names = ["user_id", "item_id", "rating", "id"]
 dataset = pd.read_csv('u.data', sep="\t", names=names)
-
-# names = ["user_id", "item_id", "rating"]
-# dataset = pd.read_csv('u2.data', sep=",", names=names)
 
 dataset_table = dataset.pivot(
     index=names[0], columns=names[1], values=names[2])
