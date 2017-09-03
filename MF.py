@@ -89,7 +89,7 @@ def regulization(U, I, bu, bi, reg_lambda):
     return reg
 
 
-def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03, reg_lambda=0.5):
+def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, reg_lambda=0.5):
     M = len(data)
     N = len(data[0])
     data_train, data_test = split_dataset(data, train_size)
@@ -137,7 +137,7 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03, reg_lambda=0.5):
     merged = tf.summary.merge_all()
 
     with tf.Session() as sess:
-        train_writer = tf.summary.FileWriter("train", sess.graph)
+        train_writer = tf.summary.FileWriter("output/train", sess.graph)
         # test_writer = tf.summary.FileWriter('test')
         sess.run(init, feed_dict={R_train: data_train})
         for i in xrange(iterations):
@@ -153,4 +153,5 @@ def ML(data, K, train_size=0.8, iterations=5000, l_rate=0.03, reg_lambda=0.5):
         print"\n"
 
 
-ML(get_dataset(), L_FACTORS, TRAIN_SIZE, ITERATIONS, LEARNING_RATE, REG_LAMBDA)
+matrix_factorization(get_dataset(), L_FACTORS, TRAIN_SIZE,
+                     ITERATIONS, LEARNING_RATE, REG_LAMBDA)
