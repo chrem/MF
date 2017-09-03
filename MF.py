@@ -8,7 +8,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 K = 5  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
 ITERATIONS = 100000  # number of iterations for optimazation
-LEARNING_RATE = 0.5  # learning rate a
+LEARNING_RATE = 0.0003  # learning rate a
 REG_LAMBDA = 0.3  # regulization parameter lambda
 
 
@@ -63,8 +63,8 @@ def ML(data):
 
     R_pred_1 = tf.matmul(U, I)
     R_pred = tf.where(isnt_nan(R), R_pred_1, nans)
-    # RMSE = rmse(R, R_pred_1)
-    RMSE = tf.square(R - R_pred)
+    RMSE = rmse(R, R_pred)
+    #RMSE = tf.square(R - R_pred)
 
     optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE)
     train = optimizer.minimize(RMSE, var_list=[U, I])
@@ -72,10 +72,11 @@ def ML(data):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         for i in xrange(ITERATIONS):
-            # sys.stdout.write("\r%d" % i)
+            sys.stdout.write("\r%d %0.5f" % (i, round(RMSE.eval(), 5)))
+            sys.stdout.flush()
             sess.run(train)
         print"\n"
-        print R_pred_1.eval()
+        print R_pred.eval()
         print R.eval()
 
 
