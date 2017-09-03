@@ -64,14 +64,21 @@ def ML(data, K, train_size=0.8, iterations=5000, learning_rate=0.03):
     R_pred = tf.where(isnt_nan(R_train), R_pred_1, nans)
     RMSE_train = rmse(R_train, R_pred)
     RMSE_test = rmse(R_test, R_pred_1)
+    tf.summary.histogram('RMSE_train', RMSE_train)
+    tf.summary.histogram('RMSE_test', RMSE_test)
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train = optimizer.minimize(RMSE_train, var_list=[U, I])
 
+    merged = tf.summary.merge_all()
+
     with tf.Session() as sess:
+        train_writer = tf.summary.FileWriter("train", sess.graph)
+        test_writer = tf.summary.FileWriter('/test')
         sess.run(tf.global_variables_initializer())
         for i in xrange(iterations):
-            sess.run(train)
+            summary, _ = sess.run([merged, train])
+            train_writer.add_summary(summary, i)
             # print R.eval()
             sys.stdout.write("\rIteration: %d%%,  RMSE train: %0.5f,  RMSE test: %0.5f" %
                              ((i + 1) * 100.0 / iterations, round(RMSE_train.eval(), 5), round(RMSE_test.eval(), 5)))
