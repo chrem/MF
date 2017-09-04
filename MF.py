@@ -10,7 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 1000  # number of iterations for optimazation (integer)
+ITERATIONS = 500000  # number of iterations for optimazation (integer)
 LEARNING_RATE = 3.0  # learning rate a (float)
 L_DECAY_STEP = 1000  # decay step of leraning rate
 L_DECAY_RATE = 0.94  # decay rate of learning rate
