@@ -3,6 +3,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
+import datetime
 import os
 import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -10,8 +11,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
 ITERATIONS = 1000  # number of iterations for optimazation (integer)
-LEARNING_RATE = 5.0  # learning rate a (float)
-REG_LAMBDA = 0.0  # regulization parameter lambda (float)
+LEARNING_RATE = 3.0  # learning rate a (float)
+L_DECAY_STEP = 1000  # decay step of leraning rate
+L_DECAY_RATE = 0.94  # decay rate of learning rate
+REG_LAMBDA = 0  # regulization parameter lambda (float)
 
 
 def variable_summaries(var):
@@ -91,7 +94,7 @@ def regulization(U, I, bu, bi, reg_lambda):
     return reg
 
 
-def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, reg_lambda=0.5):
+def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, reg_lambda=0.5, l_decay_step=1000, l_decay_rate=0.96):
     M = len(data)
     N = len(data[0])
     data_train, data_test = split_dataset(data, train_size)
@@ -128,10 +131,11 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     tf.summary.histogram('Loss', Loss)
     tf.summary.histogram('RMSE_test', RMSE_test)
 
+    # Learning rate decay
     lr = tf.constant(l_rate, name='learning_rate')
     global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(
-        lr, global_step, 10, 0.96, staircase=True)
+        lr, global_step, l_decay_step, l_decay_rate, staircase=True)
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train = optimizer.minimize(Loss)
@@ -142,18 +146,34 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         train_writer = tf.summary.FileWriter("output/train", sess.graph)
         # test_writer = tf.summary.FileWriter('test')
         sess.run(init, feed_dict={R_train: data_train})
+        feed = {R_train: data_train, R_test: data_test}
+        datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        string_1 = "Latent Factors: %d, Iterations: %d, Learning Rate: %0.3f, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
+            K, iterations, learning_rate.eval(), l_decay_step, l_decay_rate, reg_lambda)
+        with open('output/result.csv', 'a') as f:
+            f.write("\n\n%s" % string_1)
+            f.write("\nStarted: %s" % datime)
+        print string_1
+        print "Started: %s" % datime
         for i in xrange(iterations):
-            summary, _ = sess.run([merged, train], feed_dict={
-                R_train: data_train, R_test: data_test})
-            # sess.run(train)
+            summary, _ = sess.run([merged, train], feed_dict=feed)
             train_writer.add_summary(summary, i)
-
-            sys.stdout.write("\rCompleted: %0.2f%%" %
-                             ((i + 1) * 100.0 / iterations))
-            sys.stdout.flush()
-            # print rmse(R_train, prediction(U, I, bu, bi, m)).eval()
-        print"\n"
+            if (i + 1) % int(iterations / 1000) == 0:
+                rmse_train, rmse_test = sess.run(
+                    [Loss, RMSE_test], feed_dict=feed)
+                string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f" % ((i + 1) * 100.0 / iterations, round(rmse_train, 5),
+                                                                                          round(rmse_test, 5))
+                sys.stdout.write("\r%s" % string_2)
+                sys.stdout.flush()
+                if (i + 1) % int(iterations / 10) == 0:
+                    with open('output/result.csv', 'a') as f:
+                        f.write("\n%s" % string_2)
+                    # print rmse(R_train, prediction(U, I, bu, bi, m)).eval()
+        datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print"\nFinished: %s" % datime
+        with open('output/result.csv', 'a') as f:
+            f.write("\nFinished: %s" % datime)
 
 
 matrix_factorization(get_dataset(), L_FACTORS, TRAIN_SIZE,
-                     ITERATIONS, LEARNING_RATE, REG_LAMBDA)
+                     ITERATIONS, LEARNING_RATE, REG_LAMBDA, L_DECAY_STEP, L_DECAY_RATE)
