@@ -1,4 +1,4 @@
-# THIS IS MY FIRST MATRIX FACTORIZATION
+# MATRIX FACTORIZATION
 
 import numpy as np
 import tensorflow as tf
@@ -8,13 +8,13 @@ import os
 import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-L_FACTORS = 32  # latent factors
+L_FACTORS = 64  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
 ITERATIONS = 50000  # number of iterations for optimazation (integer)
-LEARNING_RATE = 1.5  # learning rate a (float)
+LEARNING_RATE = 1.2  # learning rate a (float)
 L_DECAY_STEP = 1000  # decay step of leraning rate
 L_DECAY_RATE = 0.96  # decay rate of learning rate
-REG_LAMBDA = 0  # regulization parameter lambda (float)
+REG_LAMBDA = 0.003  # regulization parameter lambda (float)
 
 
 def variable_summaries(var):
@@ -78,19 +78,25 @@ def prediction(U, I, bu, bi, m):
     return pred
 
 
-def regulization(U, I, bu, bi, reg_lambda):
-    reg_U = tf.nn.l2_loss(U)
+def regulization(Pred, U, I, bu, bi, reg_lambda):
+    # reg_U = tf.nn.l2_loss(U)
+    reg_U = tf.multiply(tf.reduce_sum(
+        tf.square(U), 1, keep_dims=True), reg_lambda)
     # reg_U = tf.multiply(reg_lambda, U2)
-    reg_I = tf.nn.l2_loss(I)
+    # reg_I = tf.nn.l2_loss(I)
+    reg_I = tf.multiply(tf.reduce_sum(
+        tf.square(I), 0, keep_dims=True), reg_lambda)
     # reg_I = tf.multiply(reg_lambda, I2)
-    reg_bu = tf.nn.l2_loss(bu)
+    # reg_bu = tf.nn.l2_loss(bu)
+    reg_bu = tf.multiply(tf.square(bu), reg_lambda)
     # reg_bu = tf.multiply(reg_lambda, bu2)
-    reg_bi = tf.nn.l2_loss(bi)
+    # reg_bi = tf.nn.l2_loss(bi)
+    reg_bi = tf.multiply(tf.square(bi), reg_lambda)
     # reg_bi = tf.multiply(reg_lambda, bi2)
-    reg = tf.add(reg_U, reg_I)
+    reg = tf.add(Pred, reg_U)
+    reg = tf.add(reg, reg_I)
     reg = tf.add(reg, reg_bu)
     reg = tf. add(reg, reg_bi)
-    reg = tf.multiply(reg, reg_lambda)
     return reg
 
 
@@ -104,10 +110,12 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     bu = tf.get_variable("User_bias", shape=(M, 1))
     bi = tf.get_variable("Item_bias", shape=(1, N))
     with tf.name_scope("Mean_U"):
-        meanU = tf.stack([tf.reduce_mean(U, 1)])
-        bu.assign(tf.transpose(meanU))
+        # meanU = tf.stack([tf.reduce_mean(U, 1)])
+        meanU = tf.reduce_mean(U, 1, keep_dims=True)
+        bu.assign(meanU)
     with tf.name_scope("Mean_I"):
-        meanI = tf.stack([tf.reduce_mean(I, 0)])
+        # meanI = tf.stack([tf.reduce_mean(I, 0)])
+        meanI = tf.reduce_mean(I, 0, keep_dims=True)
         bi.assign(meanI)
 
     variable_summaries(U)
@@ -124,7 +132,7 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         m = tf.reduce_mean(tf.matmul(U, I), name="Mean")
 
     R_pred = prediction(U, I, bu, bi, m)
-    R_pred_reg = R_pred + regulization(U, I, bu, bi, reg_lambda)
+    R_pred_reg = regulization(R_pred, U, I, bu, bi, reg_lambda)
 
     Loss = rmse(R_train, R_pred_reg, name="Loss")
     RMSE_test = rmse(R_test, R_pred, name="RMSE_test")
