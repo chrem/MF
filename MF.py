@@ -1,4 +1,4 @@
-# THIS IS MY FIRST MATRIX FACTORIZATION
+# MATRIX FACTORIZATION
 
 import numpy as np
 import tensorflow as tf
@@ -147,13 +147,12 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         # test_writer = tf.summary.FileWriter('test')
         sess.run(init, feed_dict={R_train: data_train})
         feed = {R_train: data_train, R_test: data_test}
+
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         string_1 = "Latent Factors: %d, Iterations: %d, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
             K, iterations, l_decay_step, l_decay_rate, reg_lambda)
         with open('output/result.csv', 'a') as f:
-            f.write("\n\n%s" % string_1)
-            f.write("\nStarted: %s" % datime)
-        print string_1
+            f.write("\n\n%s\nStarted: %s" % (string_1, datime))
         print "Started: %s" % datime
 
         rmse_train, rmse_test = sess.run([Loss, RMSE_test], feed_dict=feed)
@@ -178,11 +177,11 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
                 if (i + 1) % int(iterations / 20) == 0:
                     with open('output/result.csv', 'a') as f:
                         f.write("\n%s" % string_2)
-                    # print rmse(R_train, prediction(U, I, bu, bi, m)).eval()
+
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print"\nFinished: %s" % datime
         with open('output/result.csv', 'a') as f:
             f.write("\nFinished: %s" % datime)
+        print"\nFinished: %s" % datime
 
 
 matrix_factorization(get_dataset(), L_FACTORS, TRAIN_SIZE,
