@@ -1,4 +1,4 @@
-# THIS IS MY FIRST MATRIX FACTORIZATION
+# MATRIX FACTORIZATION
 
 import numpy as np
 import tensorflow as tf
@@ -11,9 +11,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
 ITERATIONS = 100000  # number of iterations for optimazation (integer)
-LEARNING_RATE = 3.0  # learning rate a (float)
-L_DECAY_STEP = 5000  # decay step of leraning rate
-L_DECAY_RATE = 0.96  # decay rate of learning rate
+LEARNING_RATE = 3.0  # starting learning rate a (float)
+L_DECAY_STEP = 5000  # decay step of leraning rate (float)
+L_DECAY_RATE = 0.96  # decay rate of learning rate (float)
 REG_LAMBDA = 0  # regulization parameter lambda (float)
 
 
