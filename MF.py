@@ -10,9 +10,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 100000  # number of iterations for optimazation (integer)
-LEARNING_RATE = 3.0  # learning rate a (float)
-L_DECAY_STEP = 5000  # decay step of leraning rate
+ITERATIONS = 50000  # number of iterations for optimazation (integer)
+LEARNING_RATE = 1.5  # learning rate a (float)
+L_DECAY_STEP = 1000  # decay step of leraning rate
 L_DECAY_RATE = 0.96  # decay rate of learning rate
 REG_LAMBDA = 0  # regulization parameter lambda (float)
 
@@ -148,24 +148,34 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         sess.run(init, feed_dict={R_train: data_train})
         feed = {R_train: data_train, R_test: data_test}
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        string_1 = "Latent Factors: %d, Iterations: %d, Learning Rate: %0.3f, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
-            K, iterations, learning_rate.eval(), l_decay_step, l_decay_rate, reg_lambda)
+        string_1 = "Latent Factors: %d, Iterations: %d, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
+            K, iterations, l_decay_step, l_decay_rate, reg_lambda)
         with open('output/result.csv', 'a') as f:
             f.write("\n\n%s" % string_1)
             f.write("\nStarted: %s" % datime)
         print string_1
         print "Started: %s" % datime
+
+        rmse_train, rmse_test = sess.run([Loss, RMSE_test], feed_dict=feed)
+        string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f,  Learning Rate: %f" % (0.0, round(rmse_train, 5),
+                                                                                                      round(rmse_test, 5), learning_rate.eval())
+        sys.stdout.write("\r%s" % string_2)
+        sys.stdout.flush()
+        with open('output/result.csv', 'a') as f:
+            f.write("\n%s" % string_2)
+
         for i in xrange(iterations):
             summary, _ = sess.run([merged, train], feed_dict=feed)
             train_writer.add_summary(summary, i)
-            if (i + 1) % int(iterations / 1000) == 0:
+
+            if (i + 1) % int(iterations / 2000) == 0:
                 rmse_train, rmse_test = sess.run(
                     [Loss, RMSE_test], feed_dict=feed)
-                string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f" % ((i + 1) * 100.0 / iterations, round(rmse_train, 5),
-                                                                                          round(rmse_test, 5))
+                string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f,  Learning Rate: %f" % ((i + 1) * 100.0 / iterations, round(rmse_train, 5),
+                                                                                                              round(rmse_test, 5), learning_rate.eval())
                 sys.stdout.write("\r%s" % string_2)
                 sys.stdout.flush()
-                if (i + 1) % int(iterations / 10) == 0:
+                if (i + 1) % int(iterations / 20) == 0:
                     with open('output/result.csv', 'a') as f:
                         f.write("\n%s" % string_2)
                     # print rmse(R_train, prediction(U, I, bu, bi, m)).eval()
