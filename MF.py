@@ -10,10 +10,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 500000  # number of iterations for optimazation (integer)
+ITERATIONS = 100000  # number of iterations for optimazation (integer)
 LEARNING_RATE = 3.0  # learning rate a (float)
-L_DECAY_STEP = 1000  # decay step of leraning rate
-L_DECAY_RATE = 0.94  # decay rate of learning rate
+L_DECAY_STEP = 5000  # decay step of leraning rate
+L_DECAY_RATE = 0.96  # decay rate of learning rate
 REG_LAMBDA = 0  # regulization parameter lambda (float)
 
 
@@ -138,7 +138,7 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         lr, global_step, l_decay_step, l_decay_rate, staircase=True)
 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    train = optimizer.minimize(Loss)
+    train = optimizer.minimize(Loss, global_step=global_step)
     init = tf.global_variables_initializer()
     merged = tf.summary.merge_all()
 
