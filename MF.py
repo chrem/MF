@@ -10,11 +10,11 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 L_FACTORS = 64  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 60000  # number of iterations for optimazation (integer)
-LEARNING_RATE = 1.5  # learning rate a (float)
+ITERATIONS = 20000  # number of iterations for optimazation (integer)
+LEARNING_RATE = 1.0  # learning rate a (float)
 L_DECAY_STEP = 1000  # decay step of leraning rate
-L_DECAY_RATE = 0.98  # decay rate of learning rate
-REG_LAMBDA = 0.01  # regulization parameter lambda (float)
+L_DECAY_RATE = 1.0  # decay rate of learning rate
+REG_LAMBDA = 0.05  # regulization parameter lambda (float)
 
 
 def variable_summaries(var, name="summaries"):
@@ -120,7 +120,7 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     R_pred_reg = regulization(R_pred, U, I, bu, bi, reg_lambda)
 
     Loss = rmse(R, R_pred_reg, name="Loss")
-    RMSE = rmse(R, R_pred, name="RMSE")
+    RMSE = rmse(R, R_pred, name="RMSE_error")
 
     rmse_summary = variable_summaries(RMSE, "RMSE")
 
@@ -149,7 +149,7 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
             K, iterations, l_decay_step, l_decay_rate, reg_lambda)
         with open('output/result.csv', 'a') as f:
             f.write("\n\n%s\nStarted: %s" % (string_1, datime))
-        print "Started: %s" % datime
+        print "%s\nStarted: %s" % (string_1, datime)
 
         rmse_train = sess.run(RMSE, feed_dict=feed_train)
         rmse_test = sess.run(RMSE, feed_dict=feed_test)
