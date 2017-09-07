@@ -144,11 +144,6 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         sess.run(init, feed_dict={R: data_train})
         feed_train = {R: data_train}
         feed_test = {R: data_test}
-        train_writer = tf.summary.FileWriter("output/train", sess.graph)
-        # test_writer = tf.summary.FileWriter('test')
-        sess.run(init, feed_dict={R_train: data_train})
-        feed = {R_train: data_train, R_test: data_test}
-
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         string_1 = "Latent Factors: %d, Iterations: %d, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
             K, iterations, l_decay_step, l_decay_rate, reg_lambda)
