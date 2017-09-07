@@ -136,7 +136,6 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     # merged = tf.summary.merge_all()
 
     with tf.Session() as sess:
-<<<<<<< HEAD
         folder = "%d_%d_%0.3f_%d_%0.2f_%0.4f" % (
             K, iterations, l_rate, l_decay_step, l_decay_rate, reg_lambda)
         train_writer = tf.summary.FileWriter(
@@ -145,13 +144,11 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         sess.run(init, feed_dict={R: data_train})
         feed_train = {R: data_train}
         feed_test = {R: data_test}
-=======
         train_writer = tf.summary.FileWriter("output/train", sess.graph)
         # test_writer = tf.summary.FileWriter('test')
         sess.run(init, feed_dict={R_train: data_train})
         feed = {R_train: data_train, R_test: data_test}
 
->>>>>>> a31bf137c0d6f687b61eccf1d22d5c9ee0e59811
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         string_1 = "Latent Factors: %d, Iterations: %d, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
             K, iterations, l_decay_step, l_decay_rate, reg_lambda)
@@ -187,11 +184,7 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
                 if (i + 1) % int(iterations / 20) == 0:
                     with open('output/result.csv', 'a') as f:
                         f.write("\n%s" % string_2)
-<<<<<<< HEAD
                     # print rmse(R, prediction(U, I, bu, bi, m)).eval()
-=======
-
->>>>>>> a31bf137c0d6f687b61eccf1d22d5c9ee0e59811
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open('output/result.csv', 'a') as f:
             f.write("\nFinished: %s" % datime)
