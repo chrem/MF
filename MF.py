@@ -82,20 +82,12 @@ def prediction(U, I, bu, bi, m):
 
 def regulization(Pred, U, I, bu, bi, reg_lambda):
     with tf.name_scope("Regularization"):
-        # reg_U = tf.nn.l2_loss(U)
         reg_U = tf.multiply(tf.reduce_sum(
             tf.square(U), 1, keep_dims=True), reg_lambda)
-        # reg_U = tf.multiply(reg_lambda, U2)
-        # reg_I = tf.nn.l2_loss(I)
         reg_I = tf.multiply(tf.reduce_sum(
             tf.square(I), 0, keep_dims=True), reg_lambda)
-        # reg_I = tf.multiply(reg_lambda, I2)
-        # reg_bu = tf.nn.l2_loss(bu)
         reg_bu = tf.multiply(tf.square(bu), reg_lambda)
-        # reg_bu = tf.multiply(reg_lambda, bu2)
-        # reg_bi = tf.nn.l2_loss(bi)
         reg_bi = tf.multiply(tf.square(bi), reg_lambda)
-        # reg_bi = tf.multiply(reg_lambda, bi2)
         reg = tf.add(Pred, reg_U)
         reg = tf.add(reg, reg_I)
         reg = tf.add(reg, reg_bu)
@@ -113,23 +105,13 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     bu = tf.get_variable("User_bias", shape=(M, 1))
     bi = tf.get_variable("Item_bias", shape=(1, N))
     with tf.name_scope("Mean_U"):
-        # meanU = tf.stack([tf.reduce_mean(U, 1)])
         meanU = tf.reduce_mean(U, 1, keep_dims=True)
         bu.assign(meanU)
     with tf.name_scope("Mean_I"):
-        # meanI = tf.stack([tf.reduce_mean(I, 0)])
         meanI = tf.reduce_mean(I, 0, keep_dims=True)
         bi.assign(meanI)
 
-    # variable_summaries(U)
-    # variable_summaries(I)
-    # variable_summaries(bu)
-    # variable_summaries(bi)
-
-    R_train = tf.placeholder(tf.float32, shape=(M, N), name="Train_data")
-    R_test = tf.placeholder(tf.float32, shape=(M, N), name="Test_data")
-    # R_train = tf.Variable(data_train, dtype=tf.float32, name="Train_data", trainable=False)
-    # R_test = tf.Variable(data_test, dtype=tf.float32, name = "Test_data", trainable = False)
+    R = tf.placeholder(tf.float32, shape=(M, N), name="Train_data")
 
     with tf.name_scope("Mean"):
         m = tf.reduce_mean(tf.matmul(U, I), name="Mean")
@@ -137,13 +119,10 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     R_pred = prediction(U, I, bu, bi, m)
     R_pred_reg = regulization(R_pred, U, I, bu, bi, reg_lambda)
 
-    Loss = rmse(R_train, R_pred_reg, name="Loss")
-    RMSE_train = rmse(R_train, R_pred, name="RMSE_train")
-    # RMSE_test = rmse(R_test, R_pred, name="RMSE_test")
-    # tf.summary.histogram('Loss', Loss)
-    # tf.summary.histogram('RMSE_test', RMSE_test)
-    train_summary = variable_summaries(RMSE_train, "RMSE")
-    # test_summary = variable_summaries(RMSE_test, "RMSE")
+    Loss = rmse(R, R_pred_reg, name="Loss")
+    RMSE = rmse(R, R_pred, name="RMSE")
+
+    rmse_summary = variable_summaries(RMSE, "RMSE")
 
     # Learning rate decay
     lr = tf.constant(l_rate, name='learning_rate')
@@ -162,9 +141,9 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         train_writer = tf.summary.FileWriter(
             "output/" + folder + "/train", sess.graph)
         test_writer = tf.summary.FileWriter('output/' + folder + '/test')
-        sess.run(init, feed_dict={R_train: data_train})
-        feed_train = {R_train: data_train}
-        feed_test = {R_train: data_test}
+        sess.run(init, feed_dict={R: data_train})
+        feed_train = {R: data_train}
+        feed_test = {R: data_test}
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         string_1 = "Latent Factors: %d, Iterations: %d, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
             K, iterations, l_decay_step, l_decay_rate, reg_lambda)
@@ -174,8 +153,8 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         print string_1
         print "Started: %s" % datime
 
-        rmse_train = sess.run(RMSE_train, feed_dict=feed_train)
-        rmse_test = sess.run(RMSE_train, feed_dict=feed_test)
+        rmse_train = sess.run(RMSE, feed_dict=feed_train)
+        rmse_test = sess.run(RMSE, feed_dict=feed_test)
 
         string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f,  Learning Rate: %f" % (0.0, round(rmse_train, 5),
                                                                                                       round(rmse_test, 5), learning_rate.eval())
@@ -186,14 +165,14 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
 
         for i in xrange(iterations):
             summary_train, _ = sess.run(
-                [train_summary, train], feed_dict=feed_train)
-            summary_test = sess.run(train_summary, feed_dict=feed_test)
+                [rmse_summary, train], feed_dict=feed_train)
+            summary_test = sess.run(rmse_summary, feed_dict=feed_test)
             train_writer.add_summary(summary_train, i)
             test_writer.add_summary(summary_test, i)
 
             if (i + 1) % int(iterations / 2000) == 0:
-                rmse_train = sess.run(RMSE_train, feed_dict=feed_train)
-                rmse_test = sess.run(RMSE_train, feed_dict=feed_test)
+                rmse_train = sess.run(RMSE, feed_dict=feed_train)
+                rmse_test = sess.run(RMSE, feed_dict=feed_test)
 
                 string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f,  Learning Rate: %f" % ((i + 1) * 100.0 / iterations, round(rmse_train, 5),
                                                                                                               round(rmse_test, 5), learning_rate.eval())
@@ -202,7 +181,7 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
                 if (i + 1) % int(iterations / 20) == 0:
                     with open('output/result.csv', 'a') as f:
                         f.write("\n%s" % string_2)
-                    # print rmse(R_train, prediction(U, I, bu, bi, m)).eval()
+                    # print rmse(R, prediction(U, I, bu, bi, m)).eval()
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print"\nFinished: %s" % datime
         with open('output/result.csv', 'a') as f:
