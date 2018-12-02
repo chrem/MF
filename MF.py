@@ -140,15 +140,15 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
         folder = "%d_%d_%0.3f_%d_%0.2f_%0.4f" % (
             K, iterations, l_rate, l_decay_step, l_decay_rate, reg_lambda)
         train_writer = tf.summary.FileWriter(
-            "output/" + folder + "/train", sess.graph)
-        test_writer = tf.summary.FileWriter('output/' + folder + '/test')
+            dir_path + "/output/" + folder + "/train", sess.graph)
+        test_writer = tf.summary.FileWriter(dir_path + '/output/' + folder + '/test')
         sess.run(init, feed_dict={R: data_train})
         feed_train = {R: data_train}
         feed_test = {R: data_test}
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         string_1 = "Latent Factors: %d, Iterations: %d, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
             K, iterations, l_decay_step, l_decay_rate, reg_lambda)
-        with open('output/result.csv', 'a') as f:
+        with open(dir_path + '/output/result.csv', 'a') as f:
             f.write("\n\n%s\nStarted: %s" % (string_1, datime))
         print("%s\nStarted: %s" % (string_1, datime))
 
@@ -159,7 +159,7 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
                                                                                                       round(rmse_test, 5), learning_rate.eval())
         sys.stdout.write("\r%s" % string_2)
         sys.stdout.flush()
-        with open('output/result.csv', 'a') as f:
+        with open(dir_path + '/output/result.csv', 'a') as f:
             f.write("\n%s" % string_2)
 
         for i in range(iterations):
@@ -178,11 +178,11 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
                 sys.stdout.write("\r%s" % string_2)
                 sys.stdout.flush()
                 if (i + 1) % int(iterations / 20) == 0:
-                    with open('output/result.csv', 'a') as f:
+                    with open(dir_path + '/output/result.csv', 'a') as f:
                         f.write("\n%s" % string_2)
                     # print( rmse(R, prediction(U, I, bu, bi, m)).eval())
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open('output/result.csv', 'a') as f:
+        with open(dir_path + '/output/result.csv', 'a') as f:
             f.write("\nFinished: %s" % datime)
         print("\nFinished: %s" % datime)
 
