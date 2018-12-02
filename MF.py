@@ -7,32 +7,35 @@ import datetime
 import os
 import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 L_FACTORS = 32  # latent factors
 TRAIN_SIZE = 0.8  # proportion of training set
-ITERATIONS = 1000  # number of iterations for optimazation (integer)
-LEARNING_RATE = 3.0  # starting learning rate a (float)
-L_DECAY_STEP = 50.0  # decay step of leraning rate (float)
-L_DECAY_RATE = 0.8  # decay rate of learning rate (float)
-REG_LAMBDA = 0  # regulization parameter lambda (float)
+ITERATIONS = 10000  # number of iterations for optimization (integer)
+LEARNING_RATE = 1.0  # learning rate a (float)
+L_DECAY_STEP = 1000  # decay step of learning rate
+L_DECAY_RATE = 1.0  # decay rate of learning rate
+REG_LAMBDA = 0.05  # regularization parameter lambda (float)
 
 
-def variable_summaries(var):
+def variable_summaries(var, name="summaries"):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-    with tf.name_scope('summaries'):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
-    with tf.name_scope('stddev'):
-        stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-    tf.summary.scalar('stddev', stddev)
-    tf.summary.scalar('max', tf.reduce_max(var))
-    tf.summary.scalar('min', tf.reduce_min(var))
-    tf.summary.histogram('histogram', var)
+    with tf.name_scope(name):
+        # mean = tf.reduce_mean(var)
+        # tf.summary.scalar('mean', mean)
+        # with tf.name_scope('stddev'):
+        #     stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+        # tf.summary.scalar('stddev', stddev)
+        maxx = tf.summary.scalar('max', tf.reduce_max(var))
+        minn = tf.summary.scalar('min', tf.reduce_min(var))
+        histt = tf.summary.histogram('histogram', var)
+        summaries = tf.summary.merge([maxx, minn, histt])
+    return summaries
 
 
 def get_dataset():
     names = ["user_id", "item_id", "rating", "id"]
-    dataset = pd.read_csv('u.data', sep="\t", names=names)
+    dataset = pd.read_csv(dir_path+'/u.data', sep="\t", names=names)
     dataset_table = dataset.pivot(
         index=names[0], columns=names[1], values=names[2])
     Ratings = np.array(dataset_table, dtype=float)
@@ -78,19 +81,18 @@ def prediction(U, I, bu, bi, m):
     return pred
 
 
-def regulization(U, I, bu, bi, reg_lambda):
-    reg_U = tf.nn.l2_loss(U)
-    # reg_U = tf.multiply(reg_lambda, U2)
-    reg_I = tf.nn.l2_loss(I)
-    # reg_I = tf.multiply(reg_lambda, I2)
-    reg_bu = tf.nn.l2_loss(bu)
-    # reg_bu = tf.multiply(reg_lambda, bu2)
-    reg_bi = tf.nn.l2_loss(bi)
-    # reg_bi = tf.multiply(reg_lambda, bi2)
-    reg = tf.add(reg_U, reg_I)
-    reg = tf.add(reg, reg_bu)
-    reg = tf. add(reg, reg_bi)
-    reg = tf.multiply(reg, reg_lambda)
+def regulization(Pred, U, I, bu, bi, reg_lambda):
+    with tf.name_scope("Regularization"):
+        reg_U = tf.multiply(tf.reduce_sum(
+            tf.square(U), 1, keepdims=True), reg_lambda)
+        reg_I = tf.multiply(tf.reduce_sum(
+            tf.square(I), 0, keepdims=True), reg_lambda)
+        reg_bu = tf.multiply(tf.square(bu), reg_lambda)
+        reg_bi = tf.multiply(tf.square(bi), reg_lambda)
+        reg = tf.add(Pred, reg_U)
+        reg = tf.add(reg, reg_I)
+        reg = tf.add(reg, reg_bu)
+        reg = tf. add(reg, reg_bi)
     return reg
 
 
@@ -104,32 +106,24 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     bu = tf.get_variable("User_bias", shape=(M, 1))
     bi = tf.get_variable("Item_bias", shape=(1, N))
     with tf.name_scope("Mean_U"):
-        meanU = tf.stack([tf.reduce_mean(U, 1)])
-        bu.assign(tf.transpose(meanU))
+        meanU = tf.reduce_mean(U, 1, keepdims=True)
+        bu.assign(meanU)
     with tf.name_scope("Mean_I"):
-        meanI = tf.stack([tf.reduce_mean(I, 0)])
+        meanI = tf.reduce_mean(I, 0, keepdims=True)
         bi.assign(meanI)
 
-    variable_summaries(U)
-    variable_summaries(I)
-    variable_summaries(bu)
-    variable_summaries(bi)
-
-    R_train = tf.placeholder(tf.float32, shape=(M, N), name="Train_data")
-    R_test = tf.placeholder(tf.float32, shape=(M, N), name="Test_data")
-    # R_train = tf.Variable(data_train, dtype=tf.float32, name="Train_data", trainable=False)
-    # R_test = tf.Variable(data_test, dtype=tf.float32, name = "Test_data", trainable = False)
+    R = tf.placeholder(tf.float32, shape=(M, N), name="Train_data")
 
     with tf.name_scope("Mean"):
         m = tf.reduce_mean(tf.matmul(U, I), name="Mean")
 
     R_pred = prediction(U, I, bu, bi, m)
-    R_pred_reg = R_pred + regulization(U, I, bu, bi, reg_lambda)
+    R_pred_reg = regulization(R_pred, U, I, bu, bi, reg_lambda)
 
-    Loss = rmse(R_train, R_pred_reg, name="Loss")
-    RMSE_test = rmse(R_test, R_pred, name="RMSE_test")
-    tf.summary.histogram('Loss', Loss)
-    tf.summary.histogram('RMSE_test', RMSE_test)
+    Loss = rmse(R, R_pred_reg, name="Loss")
+    RMSE = rmse(R, R_pred, name="RMSE_error")
+
+    rmse_summary = variable_summaries(RMSE, "RMSE")
 
     # Learning rate decay
     lr = tf.constant(l_rate, name='learning_rate')
@@ -140,39 +134,57 @@ def matrix_factorization(data, K, train_size=0.8, iterations=5000, l_rate=0.03, 
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train = optimizer.minimize(Loss, global_step=global_step)
     init = tf.global_variables_initializer()
-    merged = tf.summary.merge_all()
+    # merged = tf.summary.merge_all()
 
     with tf.Session() as sess:
-        train_writer = tf.summary.FileWriter("output/train", sess.graph)
-        # test_writer = tf.summary.FileWriter('test')
-        sess.run(init, feed_dict={R_train: data_train})
-        feed = {R_train: data_train, R_test: data_test}
-
+        folder = "%d_%d_%0.3f_%d_%0.2f_%0.4f" % (
+            K, iterations, l_rate, l_decay_step, l_decay_rate, reg_lambda)
+        train_writer = tf.summary.FileWriter(
+            "output/" + folder + "/train", sess.graph)
+        test_writer = tf.summary.FileWriter('output/' + folder + '/test')
+        sess.run(init, feed_dict={R: data_train})
+        feed_train = {R: data_train}
+        feed_test = {R: data_test}
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        string_1 = "Latent Factors: %d, Iterations: %d, Learning Rate: %0.3f, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
-            K, iterations, learning_rate.eval(), l_decay_step, l_decay_rate, reg_lambda)
+        string_1 = "Latent Factors: %d, Iterations: %d, Learning decay step: %d, Learning decay rate: %0.2f, Regulization parameter: %0.4f" % (
+            K, iterations, l_decay_step, l_decay_rate, reg_lambda)
         with open('output/result.csv', 'a') as f:
             f.write("\n\n%s\nStarted: %s" % (string_1, datime))
-        print "Started: %s" % datime
+        print("%s\nStarted: %s" % (string_1, datime))
 
-        for i in xrange(iterations):
-            summary, _ = sess.run([merged, train], feed_dict=feed)
-            train_writer.add_summary(summary, i)
-            if (i + 1) % int(iterations / 1000) == 0:
-                rmse_train, rmse_test = sess.run(
-                    [Loss, RMSE_test], feed_dict=feed)
-                string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f,  Learning rate: %f" % ((i + 1) * 100.0 / iterations, round(rmse_train, 5),
+        rmse_train = sess.run(RMSE, feed_dict=feed_train)
+        rmse_test = sess.run(RMSE, feed_dict=feed_test)
+
+        string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f,  Learning Rate: %f" % (0.0, round(rmse_train, 5),
+                                                                                                      round(rmse_test, 5), learning_rate.eval())
+        sys.stdout.write("\r%s" % string_2)
+        sys.stdout.flush()
+        with open('output/result.csv', 'a') as f:
+            f.write("\n%s" % string_2)
+
+        for i in range(iterations):
+            summary_train, _ = sess.run(
+                [rmse_summary, train], feed_dict=feed_train)
+            summary_test = sess.run(rmse_summary, feed_dict=feed_test)
+            train_writer.add_summary(summary_train, i)
+            test_writer.add_summary(summary_test, i)
+
+            if (i + 1) % int(iterations / 2000) == 0:
+                rmse_train = sess.run(RMSE, feed_dict=feed_train)
+                rmse_test = sess.run(RMSE, feed_dict=feed_test)
+
+                string_2 = "Completed: %0.2f%%,  RMSE train: %0.5f,  RMSE test: %0.5f,  Learning Rate: %f" % ((i + 1) * 100.0 / iterations, round(rmse_train, 5),
                                                                                                               round(rmse_test, 5), learning_rate.eval())
                 sys.stdout.write("\r%s" % string_2)
                 sys.stdout.flush()
-                if (i + 1) % int(iterations / 50) == 0:
+                if (i + 1) % int(iterations / 20) == 0:
                     with open('output/result.csv', 'a') as f:
                         f.write("\n%s" % string_2)
-
+                    # print( rmse(R, prediction(U, I, bu, bi, m)).eval())
         datime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open('output/result.csv', 'a') as f:
             f.write("\nFinished: %s" % datime)
-        print"\nFinished: %s" % datime
+        print("\nFinished: %s" % datime)
 
 
 matrix_factorization(get_dataset(), L_FACTORS, TRAIN_SIZE,
